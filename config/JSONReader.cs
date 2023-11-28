@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DSharpPlus.Net.Serialization;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,7 +17,12 @@ namespace ThreadFriendBot.config
         {
             using (StreamReader sr = new StreamReader("config.json"))
             {
+                // MaxG: Read the JSON file.
+                string json = await sr.ReadToEndAsync();
 
+                JSONStructure data = JsonConvert.DeserializeObject<JSONStructure>(json);
+
+                this.token = data.token;
             }
         }
     }
