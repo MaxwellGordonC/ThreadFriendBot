@@ -43,7 +43,7 @@ namespace ThreadFriendBot
             //       Ready is triggered on connecting to servers, when the bot is ready to process events.
             Client.Ready += ClientReady;
 
-            Client.ThreadCreated += JoinThread;
+            //Client.ThreadCreated += JoinThread;
 
             // MaxG: Register the slash commands.
             var SlashCommandsConfig = Client.UseSlashCommands();
@@ -68,11 +68,11 @@ namespace ThreadFriendBot
             });
         }
 
-        private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
+/*        private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
         {
             await args.Thread.JoinThreadAsync();
             return Task.CompletedTask;
-        }
+        }*/
 
         private static Task ClientReady(DiscordClient sender, DSharpPlus.EventArgs.ReadyEventArgs args)
         {
