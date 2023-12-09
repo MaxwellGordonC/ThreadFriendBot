@@ -15,8 +15,9 @@ namespace ThreadFriendBot
 {
     internal class Program
     {
-        const double DAY_THRESHOLD = 13.0;
+        const double DAY_THRESHOLD = 7.0;
         const double CHECK_HOURS = 1.0;
+        const int THREAD_MESSAGE_DELAY = 1000;
 
         private static DiscordClient Client { get; set; }
         private static CommandsNextExtension Commands { get; set; }
@@ -43,18 +44,23 @@ namespace ThreadFriendBot
             //       Ready is triggered on connecting to servers, when the bot is ready to process events.
             Client.Ready += ClientReady;
 
-            //Client.ThreadCreated += JoinThread;
+            Client.ThreadCreated += JoinThread;
 
             // MaxG: Register the slash commands.
             var SlashCommandsConfig = Client.UseSlashCommands();
             SlashCommandsConfig.RegisterCommands<Frequency>();
+
 
             ThreadTimer = new System.Timers.Timer(TimeSpan.FromHours(CHECK_HOURS).TotalMilliseconds);
             ThreadTimer.Elapsed += OnTimedEvent;
             ThreadTimer.AutoReset = true;
             ThreadTimer.Enabled = true;
 
-            await Client.ConnectAsync();           
+            await Client.ConnectAsync();
+
+            // MaxG: Loop on startup.
+            await Task.Delay(THREAD_MESSAGE_DELAY);
+            await LoopAllThreads();
 
             // MaxG: Keep the bot running infinitely (-1).
             await Task.Delay(-1);
@@ -68,11 +74,11 @@ namespace ThreadFriendBot
             });
         }
 
-/*        private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
+        private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
         {
             await args.Thread.JoinThreadAsync();
             return Task.CompletedTask;
-        }*/
+        }
 
         private static Task ClientReady(DiscordClient sender, DSharpPlus.EventArgs.ReadyEventArgs args)
         {
@@ -81,11 +87,18 @@ namespace ThreadFriendBot
 
         private static async Task<Task> LoopAllThreads()
         {
+            Console.WriteLine("Looping all threads");
             var AllThreads = Client.Guilds.SelectMany(guild => guild.Value.Threads);
+
 
             foreach (var Thread in AllThreads)
             {
+                Console.WriteLine("Checking Thread " + Thread.Value.Name);
+
                 await CheckLastThreadMessage(Thread.Value);
+                
+                // MaxG: Delay to reduce spam.
+                await Task.Delay(THREAD_MESSAGE_DELAY);
             }
             
             return Task.CompletedTask;
@@ -106,7 +119,9 @@ namespace ThreadFriendBot
                 // MaxG: Standardize.
                 message_time = message_time.ToUniversalTime();
 
-                TimeSpan difference = message_time - DateTimeOffset.UtcNow;
+                TimeSpan difference = DateTimeOffset.UtcNow - message_time;
+
+                Console.WriteLine("The day difference is " + difference.Days);
 
                 // MaxG: Check if it has been too many days since the last message.
                 if ( difference.Days > DAY_THRESHOLD )
