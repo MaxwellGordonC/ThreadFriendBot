@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <OutputType>Exe</OutputType>
-	<PublishSingleFile>true</PublishSingleFile>
+	  <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyTitle>ThreadFriendBot</AssemblyTitle>
