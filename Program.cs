@@ -16,7 +16,7 @@ namespace ThreadFriendBot
     internal class Program
     {
         const double DAY_THRESHOLD = 7.0;
-        const double CHECK_HOURS = 1.0;
+        const double CHECK_HOURS = 12.0;
         const int THREAD_MESSAGE_DELAY = 1000;
 
         private static DiscordClient Client { get; set; }
