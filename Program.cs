@@ -44,6 +44,9 @@ namespace ThreadFriendBot
             //       Ready is triggered on connecting to servers, when the bot is ready to process events.
             Client.Ready += ClientReady;
 
+            // MaxG: On resume, start the timer again.
+            Client.Resumed += ClientResumed;
+
             Client.ThreadCreated += JoinThread;
 
             // MaxG: Register the slash commands.
@@ -64,6 +67,14 @@ namespace ThreadFriendBot
 
             // MaxG: Keep the bot running infinitely (-1).
             await Task.Delay(-1);
+        }
+
+        private static Task ClientResumed(DiscordClient sender, ReadyEventArgs args)
+        {
+            // MaxG: Resume the timer after the connection resumes.
+            ThreadTimer.Enabled = true;
+
+            return Task.CompletedTask;
         }
 
         private static void OnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
