@@ -47,7 +47,7 @@ namespace ThreadFriendBot
             // MaxG: On resume, start the timer again.
             Client.Resumed += ClientResumed;
 
-            Client.ThreadCreated += JoinThread;
+            //Client.ThreadCreated += JoinThread;
 
             // MaxG: Register the slash commands.
             var SlashCommandsConfig = Client.UseSlashCommands();
@@ -85,11 +85,11 @@ namespace ThreadFriendBot
             });
         }
 
-        private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
+        /*private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
         {
             await args.Thread.JoinThreadAsync();
             return Task.CompletedTask;
-        }
+        }*/
 
         private static Task ClientReady(DiscordClient sender, DSharpPlus.EventArgs.ReadyEventArgs args)
         {
@@ -105,6 +105,14 @@ namespace ThreadFriendBot
             foreach (var Thread in AllThreads)
             {
                 Console.WriteLine("Checking Thread " + Thread.Value.Name);
+               
+                // MaxG: Skip the thread entirely if it's locked.
+                bool? IsLocked = Thread.Value.ThreadMetadata.IsLocked;
+                if ( IsLocked.HasValue && IsLocked.Value )
+                {
+                    Console.WriteLine("Thread " + Thread.Value.Name + " is locked. Skipping.");
+                    continue;
+                }
 
                 await CheckLastThreadMessage(Thread.Value);
                 
