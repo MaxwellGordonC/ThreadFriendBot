@@ -6,6 +6,7 @@ using DSharpPlus.SlashCommands;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using ThreadFriendBot.config;
@@ -101,7 +102,7 @@ namespace ThreadFriendBot
             Console.WriteLine("Looping all threads");
             var AllThreads = Client.Guilds.SelectMany(guild => guild.Value.Threads);
 
-
+            Console.WriteLine("Beginning thread checks at " + DateTime.Now);
             foreach (var Thread in AllThreads)
             {
                 Console.WriteLine("Checking Thread " + Thread.Value.Name);
@@ -119,7 +120,8 @@ namespace ThreadFriendBot
                 // MaxG: Delay to reduce spam.
                 await Task.Delay(THREAD_MESSAGE_DELAY);
             }
-            
+            Console.WriteLine("Ending thread checks at " + DateTime.Now);
+
             return Task.CompletedTask;
         }
 
