@@ -6,10 +6,8 @@ using DSharpPlus.SlashCommands;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using ThreadFriendBot.config;
 using ThreadFriendBot.External_Classes.Slash_Commands;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.Json;
 
 namespace ThreadFriendBot
 {
@@ -18,6 +16,8 @@ namespace ThreadFriendBot
         const double DAY_THRESHOLD = 7.0;
         const double CHECK_HOURS = 12.0;
         const int THREAD_MESSAGE_DELAY = 1000;
+        const string CONF_TOKEN = "token";
+        const string CONF_FREQUENCY = "Frequency";
 
         private static DiscordClient Client { get; set; }
         private static CommandsNextExtension Commands { get; set; }
@@ -26,13 +26,12 @@ namespace ThreadFriendBot
         static async Task Main(string[] args)
         {
             // MaxG: Read the config JSON and grab the bot token.
-            var JsonReader = new JSONReader();
-            await JsonReader.ReadJSON();
-
+            IConfigurationRoot Config = new ConfigurationBuilder().AddJsonFile("config.json", optional: false, reloadOnChange: true).Build();
+                       
             var DiscordConfig = new DiscordConfiguration()
             {
                 Intents = DiscordIntents.All,
-                Token = JsonReader.token,
+                Token = Config[CONF_TOKEN],
                 TokenType = TokenType.Bot,
                 AutoReconnect = true
             };
