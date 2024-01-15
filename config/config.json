@@ -1,4 +1,6 @@
 {
-  "token": "token",
-  "Frequency": 12
+  "Token": "token",
+  "DayThreshold": 7.0,
+  "CheckHours": 12.0,
+  "MessageDelay": 2000
 }

@@ -13,25 +13,35 @@ namespace ThreadFriendBot
 {
     internal class Program
     {
-        const double DAY_THRESHOLD = 7.0;
-        const double CHECK_HOURS = 12.0;
-        const int THREAD_MESSAGE_DELAY = 1000;
-        const string CONF_TOKEN = "token";
-        const string CONF_FREQUENCY = "Frequency";
+        //const double DAY_THRESHOLD = 7.0;
+        //const double CHECK_HOURS = 12.0;
+        //const int THREAD_MESSAGE_DELAY = 1000;
+        
+        const string CONF_TOKEN = "Token";
+        const string CONF_DAY_THRESHOLD = "DayThreshold";
+        const string CONF_CHECK_HOURS = "CheckHours";
+        const string CONF_MESSAGE_DELAY = "MessageDelay";
 
         private static DiscordClient Client { get; set; }
         private static CommandsNextExtension Commands { get; set; }
         private static System.Timers.Timer ThreadTimer;
 
+        private static IConfigurationRoot Config = new ConfigurationBuilder().AddJsonFile("config.json", optional: false, reloadOnChange: true).Build();
+
+        private static string GetToken() { return Config[CONF_TOKEN]; }
+        private static double GetDayThreshold() { return double.Parse( Config[CONF_DAY_THRESHOLD]); }
+        private static double GetCheckHours() { return double.Parse( Config[CONF_CHECK_HOURS]); }
+        private static int GetMessageDelay() { return Int32.Parse( Config[CONF_MESSAGE_DELAY]); }
+
         static async Task Main(string[] args)
         {
             // MaxG: Read the config JSON and grab the bot token.
-            IConfigurationRoot Config = new ConfigurationBuilder().AddJsonFile("config.json", optional: false, reloadOnChange: true).Build();
+            Config.Reload();
                        
             var DiscordConfig = new DiscordConfiguration()
             {
                 Intents = DiscordIntents.All,
-                Token = Config[CONF_TOKEN],
+                Token = GetToken(),
                 TokenType = TokenType.Bot,
                 AutoReconnect = true
             };
@@ -50,10 +60,10 @@ namespace ThreadFriendBot
 
             // MaxG: Register the slash commands.
             var SlashCommandsConfig = Client.UseSlashCommands();
-            SlashCommandsConfig.RegisterCommands<Frequency>();
+            SlashCommandsConfig.RegisterCommands<DayThreshold>();
 
 
-            ThreadTimer = new System.Timers.Timer(TimeSpan.FromHours(CHECK_HOURS).TotalMilliseconds);
+            ThreadTimer = new System.Timers.Timer(TimeSpan.FromHours( GetCheckHours() ).TotalMilliseconds);
             ThreadTimer.Elapsed += OnTimedEvent;
             ThreadTimer.AutoReset = true;
             ThreadTimer.Enabled = true;
@@ -61,7 +71,7 @@ namespace ThreadFriendBot
             await Client.ConnectAsync();
 
             // MaxG: Loop on startup.
-            await Task.Delay(THREAD_MESSAGE_DELAY);
+            await Task.Delay(GetMessageDelay());
             await LoopAllThreads();
 
             // MaxG: Keep the bot running infinitely (-1).
@@ -116,7 +126,7 @@ namespace ThreadFriendBot
                 await CheckLastThreadMessage(Thread.Value);
                 
                 // MaxG: Delay to reduce spam.
-                await Task.Delay(THREAD_MESSAGE_DELAY);
+                await Task.Delay( GetMessageDelay() );
             }
             Console.WriteLine("Ending thread checks at " + DateTime.Now);
 
@@ -143,7 +153,7 @@ namespace ThreadFriendBot
                 Console.WriteLine("The day difference is " + difference.Days);
 
                 // MaxG: Check if it has been too many days since the last message.
-                if ( difference.Days > DAY_THRESHOLD )
+                if ( difference.Days > GetDayThreshold() )
                 {
                     // MaxG: Send a message.
                     await Thread.SendMessageAsync("Hi friend, just keeping the thread alive :slight_smile:");
