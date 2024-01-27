@@ -1,20 +1,16 @@
 ﻿using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using ThreadFriendBot.config;
 
 namespace ThreadFriendBot.External_Classes.Slash_Commands
 {
     // MaxG: Commands related to frequency of messaging.
-    public class Frequency : ApplicationCommandModule
+    public class DayThreshold : ApplicationCommandModule
     {
-        public async Task SetFrequency(long NewFrequency)
+        public async Task SetDayThreshold(long NewDayThreshold)
         {
             StreamReader sr = new StreamReader("config.json");
 
@@ -27,7 +23,7 @@ namespace ThreadFriendBot.External_Classes.Slash_Commands
             // MaxG: Parse the file and fix the data into the JSONStructure class structure.
             JSONStructure config = JsonConvert.DeserializeObject<JSONStructure>(json);
             // MaxG: Set the new frequency
-            config.Frequency = NewFrequency;
+            config.Frequency = NewDayThreshold;
 
             // MaxG: Write the frequency back into the file.
             StreamWriter sw = new StreamWriter("config.json");
@@ -43,7 +39,7 @@ namespace ThreadFriendBot.External_Classes.Slash_Commands
         [SlashCommand("frequency", "Set the frequency in days of when to send a friendly message.")]
         public async Task SCFrequency(InteractionContext ctx, [Option("frequency", "message frequency (in whole days)")] long frequency)
         {
-            await SetFrequency(frequency);
+            await SetDayThreshold(frequency);
 
             // MaxG: Send a message to the user that the frequency has been set.
             await ctx.CreateResponseAsync(DSharpPlus.InteractionResponseType.ChannelMessageWithSource,

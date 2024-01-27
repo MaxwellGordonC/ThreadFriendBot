@@ -29,9 +29,9 @@ namespace ThreadFriendBot
         private static IConfigurationRoot Config = new ConfigurationBuilder().AddJsonFile("config.json", optional: false, reloadOnChange: true).Build();
 
         private static string GetToken() { return Config[CONF_TOKEN]; }
-        private static double GetDayThreshold() { return double.Parse( Config[CONF_DAY_THRESHOLD]); }
-        private static double GetCheckHours() { return double.Parse( Config[CONF_CHECK_HOURS]); }
-        private static int GetMessageDelay() { return Int32.Parse( Config[CONF_MESSAGE_DELAY]); }
+        private static double GetDayThreshold() { return double.Parse( Config[CONF_DAY_THRESHOLD] ); }
+        private static double GetCheckHours() { return double.Parse( Config[CONF_CHECK_HOURS] ); }
+        private static int GetMessageDelay() { return Int32.Parse( Config[CONF_MESSAGE_DELAY] ); }
 
         static async Task Main(string[] args)
         {
