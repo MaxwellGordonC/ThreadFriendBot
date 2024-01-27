@@ -94,11 +94,6 @@ namespace ThreadFriendBot
             });
         }
 
-        /*private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
-        {
-            await args.Thread.JoinThreadAsync();
-            return Task.CompletedTask;
-        }*/
 
         private static Task ClientReady(DiscordClient sender, DSharpPlus.EventArgs.ReadyEventArgs args)
         {
