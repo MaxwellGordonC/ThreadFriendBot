@@ -33,6 +33,12 @@ namespace ThreadFriendBot
         private static double GetCheckHours() { return double.Parse( Config[CONF_CHECK_HOURS] ); }
         private static int GetMessageDelay() { return Int32.Parse( Config[CONF_MESSAGE_DELAY] ); }
 
+        // MaxG: TODO Implement from config.
+        private static string GetRandomMessage()
+        {
+            return "Hi friend, just keeping the thread alive :slight_smile:";
+        }
+
         static async Task Main(string[] args)
         {
             // MaxG: Read the config JSON and grab the bot token.
@@ -148,7 +154,7 @@ namespace ThreadFriendBot
                 if ( difference.Days > GetDayThreshold() )
                 {
                     // MaxG: Send a message. * TOOD: Custom messages *
-                    await Thread.SendMessageAsync("Hi friend, just keeping the thread alive :slight_smile:");
+                    await Thread.SendMessageAsync( GetRandomMessage() );
                 }
             }
 
