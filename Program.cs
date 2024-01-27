@@ -56,12 +56,9 @@ namespace ThreadFriendBot
             // MaxG: On resume, start the timer again.
             Client.Resumed += ClientResumed;
 
-            //Client.ThreadCreated += JoinThread;
-
             // MaxG: Register the slash commands.
             var SlashCommandsConfig = Client.UseSlashCommands();
             SlashCommandsConfig.RegisterCommands<DayThreshold>();
-
 
             ThreadTimer = new System.Timers.Timer(TimeSpan.FromHours( GetCheckHours() ).TotalMilliseconds);
             ThreadTimer.Elapsed += OnTimedEvent;
