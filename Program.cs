@@ -147,7 +147,7 @@ namespace ThreadFriendBot
                 // MaxG: Check if it has been too many days since the last message.
                 if ( difference.Days > GetDayThreshold() )
                 {
-                    // MaxG: Send a message.
+                    // MaxG: Send a message. * TOOD: Custom messages *
                     await Thread.SendMessageAsync("Hi friend, just keeping the thread alive :slight_smile:");
                 }
             }
