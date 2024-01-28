@@ -46,8 +46,6 @@ namespace ThreadFriendBot
             return msgs[rand_idx];
         }
 
-
-        // MaxG: TODO: Parsing logic, etc.
         // MaxG: Return a string in the format of "message [number of repeats]".
         private static string GetRandThreadMsg(DiscordMessage PreviousMsg)
         {
