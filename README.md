@@ -4,5 +4,4 @@ This is a simple bot that keeps threads from being hidden by sending a message i
 
 ## Planned Features
 
-- Hook up /frequency command to bot behavior.
-- Ability to add custom bot messages.
+- Implement slash commands for all configurable options aside from bot token.
