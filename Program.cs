@@ -49,6 +49,18 @@ namespace ThreadFriendBot
             return msgs[rand_idx];
         }
 
+
+        // MaxG: TODO: Parsing logic, etc.
+        private static string GetRandThreadMsg(string PreviousMsg)
+        {
+            if ( String.IsNullOrEmpty(PreviousMsg) )
+            {
+                return GetRandomMessage();
+            }
+
+            return String.Empty;
+        }
+
         static async Task Main(string[] args)
         {
             // MaxG: Read the config JSON and grab the bot token.
