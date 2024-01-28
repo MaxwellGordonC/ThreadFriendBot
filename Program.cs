@@ -52,6 +52,10 @@ namespace ThreadFriendBot
                 AutoReconnect = true
             };
 
+            Console.WriteLine($"GetDayThreshold() => {GetDayThreshold()}");
+            Console.WriteLine($"GetCheckHours() => {GetCheckHours()}");
+            Console.WriteLine($"GetMessageDelay() => {GetMessageDelay()}");
+
             // MaxG: Create a new instance of the client with this configuration.
             Client = new DiscordClient(DiscordConfig);
 
@@ -153,7 +157,7 @@ namespace ThreadFriendBot
                 // MaxG: Check if it has been too many days since the last message.
                 if ( difference.Days > GetDayThreshold() )
                 {
-                    // MaxG: Send a message. * TOOD: Custom messages *
+                    // MaxG: Send a message.
                     await Thread.SendMessageAsync( GetRandomMessage() );
                 }
             }
