@@ -138,7 +138,7 @@ namespace ThreadFriendBot
 
             if ( messages.Any() )
             {
-                var message = messages.[0];
+                var message = messages[0];
 
                 // MaxG: Get the timestamp.
                 DateTimeOffset message_time = message.Timestamp;
