@@ -8,15 +8,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using ThreadFriendBot.External_Classes.Slash_Commands;
 using Microsoft.Extensions.Configuration;
+using System.Text.RegularExpressions;
 
 namespace ThreadFriendBot
 {
     internal class Program
-    {
-        //const double DAY_THRESHOLD = 7.0;
-        //const double CHECK_HOURS = 12.0;
-        //const int THREAD_MESSAGE_DELAY = 1000;
-        
+    {      
         const string CONF_TOKEN = "Token";
         const string CONF_DAY_THRESHOLD = "DayThreshold";
         const string CONF_CHECK_HOURS = "CheckHours";
@@ -51,14 +48,30 @@ namespace ThreadFriendBot
 
 
         // MaxG: TODO: Parsing logic, etc.
-        private static string GetRandThreadMsg(string PreviousMsg)
+        // MaxG: Return a string in the format of "message [number of repeats]".
+        private static string GetRandThreadMsg(DiscordMessage PreviousMsg)
         {
-            if ( String.IsNullOrEmpty(PreviousMsg) )
+            // MaxG: Edge case; starting message;
+            if (PreviousMsg.Author.Id != Client.CurrentUser.Id || PreviousMsg == null)
             {
-                return GetRandomMessage();
+                return $"{GetRandomMessage()} `[1]`";
             }
 
-            return String.Empty;
+            // MaxG: Parse using regex to extract the number of repeats.
+            string pattern = @"\`\[(\d+)\]\`";
+            Match match = Regex.Match(PreviousMsg.Content, pattern);
+
+            if (match.Success)
+            {
+                // MaxG: Extract int.
+                int repeats = int.Parse(match.Groups[1].Value);
+
+                return $"{GetRandomMessage()} `[{repeats + 1}]`";
+            }
+
+            // MaxG: Fallback. This should not happen. If it does, a previous version may be conflicting.
+            Console.WriteLine($"GetRandThreadMsg({PreviousMsg}) ==> parsing failed.");
+            return $"{GetRandomMessage()} `[1]`";
         }
 
         static async Task Main(string[] args)
@@ -173,10 +186,18 @@ namespace ThreadFriendBot
                 Console.WriteLine("The day difference is " + difference.Days);
 
                 // MaxG: Check if it has been too many days since the last message.
-                if ( difference.Days > GetDayThreshold() )
+                if (difference.Days > GetDayThreshold() || true)
                 {
+                    Console.WriteLine("Sending a message!");
+
                     // MaxG: Send a message.
-                    await Thread.SendMessageAsync( GetRandomMessage() );
+                    await Thread.SendMessageAsync( GetRandThreadMsg(message) );
+
+                    // MaxG: Reduce spam.
+                    if (message.Author.Id == Client.CurrentUser.Id)
+                    { 
+                        await Thread.DeleteMessageAsync(message);
+                    }
                 }
             }
 
