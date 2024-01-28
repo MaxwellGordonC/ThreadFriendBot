@@ -38,11 +38,15 @@ namespace ThreadFriendBot
             // MaxG: Get all messages as an array of strings.
             return Config.GetSection(CONF_MESSAGES).GetChildren().Select(child => child.Value).ToArray();
         }
+        private static Random Rand = new Random();
 
-        // MaxG: TODO Implement from config.
+        // TODO: Append message number at the end of the message.
         private static string GetRandomMessage()
         {
-            return "Hi friend, just keeping the thread alive :slight_smile:";
+            string[] msgs = GetMessages();
+            int rand_idx = Rand.Next(0, msgs.Length);
+
+            return msgs[rand_idx];
         }
 
         static async Task Main(string[] args)
