@@ -21,6 +21,7 @@ namespace ThreadFriendBot
         const string CONF_DAY_THRESHOLD = "DayThreshold";
         const string CONF_CHECK_HOURS = "CheckHours";
         const string CONF_MESSAGE_DELAY = "MessageDelay";
+        const string CONF_MESSAGES = "Messages";
 
         private static DiscordClient Client { get; set; }
         private static CommandsNextExtension Commands { get; set; }
@@ -32,6 +33,11 @@ namespace ThreadFriendBot
         private static double GetDayThreshold() { return double.Parse( Config[CONF_DAY_THRESHOLD] ); }
         private static double GetCheckHours() { return double.Parse( Config[CONF_CHECK_HOURS] ); }
         private static int GetMessageDelay() { return Int32.Parse( Config[CONF_MESSAGE_DELAY] ); }
+        private static string[] GetMessages()
+        {
+            // MaxG: Get all messages as an array of strings.
+            return Config.GetSection(CONF_MESSAGES).GetChildren().Select(child => child.Value).ToArray();
+        }
 
         // MaxG: TODO Implement from config.
         private static string GetRandomMessage()
@@ -51,10 +57,6 @@ namespace ThreadFriendBot
                 TokenType = TokenType.Bot,
                 AutoReconnect = true
             };
-
-            Console.WriteLine($"GetDayThreshold() => {GetDayThreshold()}");
-            Console.WriteLine($"GetCheckHours() => {GetCheckHours()}");
-            Console.WriteLine($"GetMessageDelay() => {GetMessageDelay()}");
 
             // MaxG: Create a new instance of the client with this configuration.
             Client = new DiscordClient(DiscordConfig);
