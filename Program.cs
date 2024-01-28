@@ -186,7 +186,7 @@ namespace ThreadFriendBot
                 Console.WriteLine("The day difference is " + difference.Days);
 
                 // MaxG: Check if it has been too many days since the last message.
-                if (difference.Days > GetDayThreshold() || true)
+                if ( difference.Days > GetDayThreshold() )
                 {
                     Console.WriteLine("Sending a message!");
 
