@@ -4,36 +4,85 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.SlashCommands;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
-using ThreadFriendBot.config;
 using ThreadFriendBot.External_Classes.Slash_Commands;
+using Microsoft.Extensions.Configuration;
+using System.Text.RegularExpressions;
 
 namespace ThreadFriendBot
 {
     internal class Program
-    {
-        const double DAY_THRESHOLD = 7.0;
-        const double CHECK_HOURS = 12.0;
-        const int THREAD_MESSAGE_DELAY = 1000;
+    {      
+        const string CONF_TOKEN = "Token";
+        const string CONF_DAY_THRESHOLD = "DayThreshold";
+        const string CONF_CHECK_HOURS = "CheckHours";
+        const string CONF_MESSAGE_DELAY = "MessageDelay";
+        const string CONF_MESSAGES = "Messages";
 
         private static DiscordClient Client { get; set; }
         private static CommandsNextExtension Commands { get; set; }
         private static System.Timers.Timer ThreadTimer;
 
+        private static IConfigurationRoot Config = new ConfigurationBuilder().AddJsonFile("config.json", optional: false, reloadOnChange: true).Build();
+
+        private static string GetToken() { return Config[CONF_TOKEN]; }
+        private static double GetDayThreshold() { return double.Parse( Config[CONF_DAY_THRESHOLD] ); }
+        private static double GetCheckHours() { return double.Parse( Config[CONF_CHECK_HOURS] ); }
+        private static int GetMessageDelay() { return Int32.Parse( Config[CONF_MESSAGE_DELAY] ); }
+        private static string[] GetMessages()
+        {
+            // MaxG: Get all messages as an array of strings.
+            return Config.GetSection(CONF_MESSAGES).GetChildren().Select(child => child.Value).ToArray();
+        }
+        private static Random Rand = new Random();
+
+        // TODO: Append message number at the end of the message.
+        private static string GetRandomMessage()
+        {
+            string[] msgs = GetMessages();
+            int rand_idx = Rand.Next(0, msgs.Length);
+
+            return msgs[rand_idx];
+        }
+
+
+        // MaxG: TODO: Parsing logic, etc.
+        // MaxG: Return a string in the format of "message [number of repeats]".
+        private static string GetRandThreadMsg(DiscordMessage PreviousMsg)
+        {
+            // MaxG: Edge case; starting message;
+            if (PreviousMsg.Author.Id != Client.CurrentUser.Id || PreviousMsg == null)
+            {
+                return $"{GetRandomMessage()} `[1]`";
+            }
+
+            // MaxG: Parse using regex to extract the number of repeats.
+            string pattern = @"\`\[(\d+)\]\`";
+            Match match = Regex.Match(PreviousMsg.Content, pattern);
+
+            if (match.Success)
+            {
+                // MaxG: Extract int.
+                int repeats = int.Parse(match.Groups[1].Value);
+
+                return $"{GetRandomMessage()} `[{repeats + 1}]`";
+            }
+
+            // MaxG: Fallback. This should not happen. If it does, a previous version may be conflicting.
+            Console.WriteLine($"GetRandThreadMsg({PreviousMsg}) ==> parsing failed.");
+            return $"{GetRandomMessage()} `[1]`";
+        }
+
         static async Task Main(string[] args)
         {
             // MaxG: Read the config JSON and grab the bot token.
-            var JsonReader = new JSONReader();
-            await JsonReader.ReadJSON();
-
+            Config.Reload();
+                       
             var DiscordConfig = new DiscordConfiguration()
             {
                 Intents = DiscordIntents.All,
-                Token = JsonReader.token,
+                Token = GetToken(),
                 TokenType = TokenType.Bot,
                 AutoReconnect = true
             };
@@ -48,14 +97,11 @@ namespace ThreadFriendBot
             // MaxG: On resume, start the timer again.
             Client.Resumed += ClientResumed;
 
-            //Client.ThreadCreated += JoinThread;
-
             // MaxG: Register the slash commands.
             var SlashCommandsConfig = Client.UseSlashCommands();
-            SlashCommandsConfig.RegisterCommands<Frequency>();
+            SlashCommandsConfig.RegisterCommands<DayThreshold>();
 
-
-            ThreadTimer = new System.Timers.Timer(TimeSpan.FromHours(CHECK_HOURS).TotalMilliseconds);
+            ThreadTimer = new System.Timers.Timer(TimeSpan.FromHours( GetCheckHours() ).TotalMilliseconds);
             ThreadTimer.Elapsed += OnTimedEvent;
             ThreadTimer.AutoReset = true;
             ThreadTimer.Enabled = true;
@@ -63,7 +109,7 @@ namespace ThreadFriendBot
             await Client.ConnectAsync();
 
             // MaxG: Loop on startup.
-            await Task.Delay(THREAD_MESSAGE_DELAY);
+            await Task.Delay(GetMessageDelay());
             await LoopAllThreads();
 
             // MaxG: Keep the bot running infinitely (-1).
@@ -86,11 +132,6 @@ namespace ThreadFriendBot
             });
         }
 
-        /*private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
-        {
-            await args.Thread.JoinThreadAsync();
-            return Task.CompletedTask;
-        }*/
 
         private static Task ClientReady(DiscordClient sender, DSharpPlus.EventArgs.ReadyEventArgs args)
         {
@@ -118,7 +159,7 @@ namespace ThreadFriendBot
                 await CheckLastThreadMessage(Thread.Value);
                 
                 // MaxG: Delay to reduce spam.
-                await Task.Delay(THREAD_MESSAGE_DELAY);
+                await Task.Delay( GetMessageDelay() );
             }
             Console.WriteLine("Ending thread checks at " + DateTime.Now);
 
@@ -132,7 +173,7 @@ namespace ThreadFriendBot
 
             if ( messages.Any() )
             {
-                var message = messages.First();
+                var message = messages[0];
 
                 // MaxG: Get the timestamp.
                 DateTimeOffset message_time = message.Timestamp;
@@ -145,10 +186,18 @@ namespace ThreadFriendBot
                 Console.WriteLine("The day difference is " + difference.Days);
 
                 // MaxG: Check if it has been too many days since the last message.
-                if ( difference.Days > DAY_THRESHOLD )
+                if ( difference.Days > GetDayThreshold() )
                 {
+                    Console.WriteLine("Sending a message!");
+
                     // MaxG: Send a message.
-                    await Thread.SendMessageAsync("Hi friend, just keeping the thread alive :slight_smile:");
+                    await Thread.SendMessageAsync( GetRandThreadMsg(message) );
+
+                    // MaxG: Reduce spam.
+                    if (message.Author.Id == Client.CurrentUser.Id)
+                    { 
+                        await Thread.DeleteMessageAsync(message);
+                    }
                 }
             }
 
