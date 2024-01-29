@@ -96,8 +96,8 @@ namespace ThreadFriendBot
             Client.Resumed += ClientResumed;
 
             // MaxG: Register the slash commands.
-            var SlashCommandsConfig = Client.UseSlashCommands();
-            SlashCommandsConfig.RegisterCommands<DayThreshold>();
+            //var SlashCommandsConfig = Client.UseSlashCommands();
+            //SlashCommandsConfig.RegisterCommands<DayThreshold>();
 
             ThreadTimer = new System.Timers.Timer(TimeSpan.FromHours( GetCheckHours() ).TotalMilliseconds);
             ThreadTimer.Elapsed += OnTimedEvent;

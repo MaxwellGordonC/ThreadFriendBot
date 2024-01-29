@@ -1,4 +1,4 @@
-﻿using DSharpPlus.Entities;
+﻿/*using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 using Newtonsoft.Json;
 using System.IO;
@@ -47,3 +47,4 @@ namespace ThreadFriendBot.External_Classes.Slash_Commands
         }
     }
 }
+*/
