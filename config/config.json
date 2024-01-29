@@ -1,6 +1,10 @@
 {
-  "Token": "token",
+  "Token": "Token goes here!",
   "DayThreshold": 7.0,
   "CheckHours": 12.0,
-  "MessageDelay": 2000
+  "MessageDelay": 1000,
+  "Messages": [
+    "Hi friend, just keeping the thread alive :slight_smile:",
+	  "Just doin' my job :cloud: :broom:"
+  ]
 }
