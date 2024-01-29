@@ -50,7 +50,7 @@ namespace ThreadFriendBot
         private static string GetRandThreadMsg(DiscordMessage PreviousMsg)
         {
             // MaxG: Edge case; starting message;
-            if (PreviousMsg.Author.Id != Client.CurrentUser.Id || PreviousMsg == null)
+            if (PreviousMsg == null || PreviousMsg.Author.Id != Client.CurrentUser.Id)
             {
                 return $"{GetRandomMessage()} `[1]`";
             }
