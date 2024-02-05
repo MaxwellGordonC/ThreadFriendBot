@@ -19,6 +19,7 @@ namespace ThreadFriendBot
         const string CONF_CHECK_HOURS = "CheckHours";
         const string CONF_MESSAGE_DELAY = "MessageDelay";
         const string CONF_MESSAGES = "Messages";
+        const double MS_PER_DAY = 86400000;
 
         private static DiscordClient Client { get; set; }
         private static CommandsNextExtension Commands { get; set; }
@@ -180,11 +181,12 @@ namespace ThreadFriendBot
                 message_time = message_time.ToUniversalTime();
 
                 TimeSpan difference = DateTimeOffset.UtcNow - message_time;
+                double day_difference = difference.Milliseconds * MS_PER_DAY;
 
-                Console.WriteLine("The day difference is " + difference.Days);
+                Console.WriteLine("The day difference is " + day_difference);
 
                 // MaxG: Check if it has been too many days since the last message.
-                if ( difference.Days >= GetDayThreshold() )
+                if (day_difference >= GetDayThreshold() )
                 {
                     Console.WriteLine("Sending a message!");
 
