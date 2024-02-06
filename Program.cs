@@ -9,9 +9,12 @@ using System.Threading.Tasks;
 //using ThreadFriendBot.External_Classes.Slash_Commands;
 using Microsoft.Extensions.Configuration;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace ThreadFriendBot
 {
+    
+
     internal class Program
     {      
         const string CONF_TOKEN = "Token";
@@ -19,7 +22,8 @@ namespace ThreadFriendBot
         const string CONF_CHECK_HOURS = "CheckHours";
         const string CONF_MESSAGE_DELAY = "MessageDelay";
         const string CONF_MESSAGES = "Messages";
-        const double MS_PER_DAY = 86400000;
+        const string CONF_USER_MENTIONS = "UserMentions";
+        const string CONF_REPEAT_THRESHOLD = "RepeatMentionThreshold";
 
         private static DiscordClient Client { get; set; }
         private static CommandsNextExtension Commands { get; set; }
@@ -36,9 +40,14 @@ namespace ThreadFriendBot
             // MaxG: Get all messages as an array of strings.
             return Config.GetSection(CONF_MESSAGES).GetChildren().Select(child => child.Value).ToArray();
         }
+        private static ulong[] GetUserMentions()
+        {
+            return Config.GetSection(CONF_USER_MENTIONS).GetChildren().Select(child => ulong.Parse(child.Value)).ToArray();
+        }
+        private static int GetMentionRepeatThreshold() { return Int32.Parse(Config[CONF_REPEAT_THRESHOLD]); }
+
         private static Random Rand = new Random();
 
-        // TODO: Append message number at the end of the message.
         private static string GetRandomMessage()
         {
             string[] msgs = GetMessages();
@@ -48,7 +57,7 @@ namespace ThreadFriendBot
         }
 
         // MaxG: Return a string in the format of "message [number of repeats]".
-        private static string GetRandThreadMsg(DiscordMessage PreviousMsg)
+        private static async Task<string> GetRandThreadMsg(DiscordMessage PreviousMsg)
         {
             // MaxG: Edge case; starting message;
             if (PreviousMsg == null || PreviousMsg.Author.Id != Client.CurrentUser.Id)
@@ -65,7 +74,29 @@ namespace ThreadFriendBot
                 // MaxG: Extract int.
                 int repeats = int.Parse(match.Groups[1].Value);
 
-                return $"{GetRandomMessage()} `[{repeats + 1}]`";
+                string result = $"{GetRandomMessage()} `[{repeats + 1}]`";
+
+                int repeat_threshold = GetMentionRepeatThreshold();
+
+                // MaxG: See if there have been too many repeats.
+                if ( repeats >= repeat_threshold)
+                {
+                    Console.WriteLine($"Number of repeats, {repeats}, is greater than {repeat_threshold}. Mentioning users.");
+                    ulong[] mentions = GetUserMentions();
+
+                    StringBuilder sb = new StringBuilder(result);
+
+                    for (int i = 0; i < mentions.Length; i++)
+                    {
+                        DiscordUser user = await Client.GetUserAsync(mentions[i]);
+                        sb.Append($" {user.Mention} ");
+                        Console.WriteLine($"Mentioning {user.Username}");
+                    }
+
+                    result = sb.ToString();
+                }
+
+                return result;
             }
 
             // MaxG: Fallback. This should not happen. If it does, a previous version may be conflicting.
@@ -73,10 +104,18 @@ namespace ThreadFriendBot
             return $"{GetRandomMessage()} `[1]`";
         }
 
+        private static void OnConfigChanged(object state)
+        {
+            Console.WriteLine("config.json has been updated.");
+        }
+
         static async Task Main(string[] args)
         {
             // MaxG: Read the config JSON and grab the bot token.
             Config.Reload();
+
+            // MaxG: Subscribe to Changed.
+            Config.GetReloadToken().RegisterChangeCallback(OnConfigChanged, null);
                        
             var DiscordConfig = new DiscordConfiguration()
             {
@@ -95,6 +134,8 @@ namespace ThreadFriendBot
 
             // MaxG: On resume, start the timer again.
             Client.Resumed += ClientResumed;
+
+            
 
             // MaxG: Register the slash commands.
             //var SlashCommandsConfig = Client.UseSlashCommands();
@@ -181,17 +222,16 @@ namespace ThreadFriendBot
                 message_time = message_time.ToUniversalTime();
 
                 TimeSpan difference = DateTimeOffset.UtcNow - message_time;
-                double day_difference = difference.Milliseconds * MS_PER_DAY;
 
-                Console.WriteLine("The day difference is " + day_difference);
+                Console.WriteLine($"The day difference is {difference.TotalDays}");
 
                 // MaxG: Check if it has been too many days since the last message.
-                if (day_difference >= GetDayThreshold() )
+                if (difference.TotalDays >= GetDayThreshold() )
                 {
                     Console.WriteLine("Sending a message!");
 
                     // MaxG: Send a message.
-                    await Thread.SendMessageAsync( GetRandThreadMsg(message) );
+                    await Thread.SendMessageAsync( await GetRandThreadMsg(message) );
 
                     // MaxG: Reduce spam.
                     if (message.Author.Id == Client.CurrentUser.Id)
