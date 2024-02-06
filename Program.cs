@@ -72,9 +72,9 @@ namespace ThreadFriendBot
             if (match.Success)
             {
                 // MaxG: Extract int.
-                int repeats = int.Parse(match.Groups[1].Value);
+                int repeats = int.Parse(match.Groups[1].Value) + 1;
 
-                string result = $"{GetRandomMessage()} `[{repeats + 1}]`";
+                string result = $"{GetRandomMessage()} `[{repeats}]`";
 
                 int repeat_threshold = GetMentionRepeatThreshold();
 
