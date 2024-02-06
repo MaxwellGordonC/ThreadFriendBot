@@ -5,6 +5,11 @@
   "MessageDelay": 1000,
   "Messages": [
     "Hi friend, just keeping the thread alive :slight_smile:",
-	  "Just doin' my job :cloud: :broom:"
-  ]
+    "Just doin' my job :cloud: :broom:"
+  ],
+  "UserMentions": [
+    0987654321,
+    1234567890
+  ],
+  "RepeatMentionThreshold": 3
 }
