@@ -13,7 +13,16 @@ using System.Text;
 
 namespace ThreadFriendBot
 {
-    
+    public sealed class BotConfiguration
+    {
+        public string Token { get; set; }
+        public double DayThreshold { get; set; }
+        public double CheckHours { get; set; }
+        public int MessageDelay { get; set; }
+        public string[] Messages { get; set; }
+        public ulong[] UserMentions { get; set; }
+        public int RepeatMentionThreshold { get; set; }
+    }
 
     internal class Program
     {      
