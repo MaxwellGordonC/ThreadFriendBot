@@ -24,6 +24,7 @@ namespace ThreadFriendBot
         public ulong[]? UserMentions { get; set; }
         public int RepeatMentionThreshold { get; set; }
         public ulong? TicketBotID { get; set; }
+        public string NotAThreadMessage { get; set; }
     }
 
     internal class Program
@@ -170,8 +171,6 @@ namespace ThreadFriendBot
 
         private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
         {
-            await args.Thread.JoinThreadAsync();
-
             // MaxG: Wait just to ensure all users have joined.
             await Task.Delay(BotConfig.MessageDelay);
 
@@ -180,7 +179,7 @@ namespace ThreadFriendBot
             {
                 if (user.Id == BotConfig.TicketBotID)
                 {
-                    StringBuilder sb = new StringBuilder(":warning: Warning! :warning:\nThis thread is not a ticket.");
+                    StringBuilder sb = new StringBuilder(BotConfig.NotAThreadMessage);
 
                     // MaxG: Optionally mention users.
                     if (BotConfig.UserMentions?.Length > 0)
@@ -194,8 +193,10 @@ namespace ThreadFriendBot
                         }
                     }
 
-                    await args.Thread.SendMessageAsync(sb.ToString());
-                    break;
+                    string result = sb.ToString();
+                    await args.Thread.SendMessageAsync(result);
+
+                    return Task.CompletedTask;
                 }
             }
 
