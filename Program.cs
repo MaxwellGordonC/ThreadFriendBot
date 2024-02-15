@@ -21,7 +21,7 @@ namespace ThreadFriendBot
         public double CheckHours { get; set; }
         public int MessageDelay { get; set; }
         public string[] Messages { get; set; }
-        public ulong[] UserMentions { get; set; }
+        public ulong[]? UserMentions { get; set; }
         public int RepeatMentionThreshold { get; set; }
     }
 
@@ -67,7 +67,7 @@ namespace ThreadFriendBot
                 int repeat_threshold = BotConfig.RepeatMentionThreshold;
 
                 // MaxG: See if there have been too many repeats.
-                if ( repeats >= repeat_threshold)
+                if ( repeats >= repeat_threshold && BotConfig.UserMentions != null )
                 {
                     Console.WriteLine($"Number of repeats, {repeats}, is greater than {repeat_threshold}. Mentioning users.");
                     ulong[] mentions = BotConfig.UserMentions;
