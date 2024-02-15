@@ -8,8 +8,9 @@
     "Just doin' my job :cloud: :broom:"
   ],
   "UserMentions": [
-    0987654321,
+    "0987654321",
     1234567890
   ],
-  "RepeatMentionThreshold": 3
+  "RepeatMentionThreshold": 3,
+  "TicketBotID": 114390120825975777
 }

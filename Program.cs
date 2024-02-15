@@ -23,6 +23,7 @@ namespace ThreadFriendBot
         public string[] Messages { get; set; }
         public ulong[]? UserMentions { get; set; }
         public int RepeatMentionThreshold { get; set; }
+        public ulong? TicketBotID { get; set; }
     }
 
     internal class Program
@@ -67,7 +68,8 @@ namespace ThreadFriendBot
                 int repeat_threshold = BotConfig.RepeatMentionThreshold;
 
                 // MaxG: See if there have been too many repeats.
-                if ( repeats >= repeat_threshold && BotConfig.UserMentions != null )
+                //                                      Check if NOT null and not empty.
+                if ( repeats >= repeat_threshold && BotConfig.UserMentions?.Length > 0 )
                 {
                     Console.WriteLine($"Number of repeats, {repeats}, is greater than {repeat_threshold}. Mentioning users.");
                     ulong[] mentions = BotConfig.UserMentions;
@@ -128,7 +130,8 @@ namespace ThreadFriendBot
             // MaxG: On resume, start the timer again.
             Client.Resumed += ClientResumed;
 
-            
+            // MaxG: Join the thread and check to see if it is a ticket.
+            Client.ThreadCreated += JoinThread;
 
             // MaxG: Register the slash commands.
             //var SlashCommandsConfig = Client.UseSlashCommands();
@@ -163,6 +166,40 @@ namespace ThreadFriendBot
             {
                 await LoopAllThreads();
             });
+        }
+
+        private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
+        {
+            await args.Thread.JoinThreadAsync();
+
+            // MaxG: Wait just to ensure all users have joined.
+            await Task.Delay(BotConfig.MessageDelay);
+
+            // MaxG: Loop all users.
+            foreach (DiscordUser user in args.Thread.Users)
+            {
+                if (user.Id == BotConfig.TicketBotID)
+                {
+                    StringBuilder sb = new StringBuilder(":warning: Warning! :warning:\nThis thread is not a ticket.");
+
+                    // MaxG: Optionally mention users.
+                    if (BotConfig.UserMentions?.Length > 0)
+                    {
+                        ulong[] mentions = BotConfig.UserMentions;
+
+                        for (int i = 0; i < mentions.Length; i++)
+                        {
+                            DiscordUser u = await Client.GetUserAsync(mentions[i]);
+                            sb.Append($" {u.Mention} ");
+                        }
+                    }
+
+                    await args.Thread.SendMessageAsync(sb.ToString());
+                    break;
+                }
+            }
+
+            return Task.CompletedTask;
         }
 
 
