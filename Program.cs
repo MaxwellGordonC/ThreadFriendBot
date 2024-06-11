@@ -38,10 +38,24 @@ namespace ThreadFriendBot
 
         private static Random Rand = new Random();
 
+        // MaxG: Log with indents.
+        private static void LogIndented(int level, string message)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < level; i++)
+            {
+                sb.Append("\t");
+            }
+            sb.Append(message);
+            Console.WriteLine(sb.ToString());
+        }
+
         private static string GetRandomMessage()
         {
             string[] msgs = BotConfig.Messages;
             int rand_idx = Rand.Next(0, msgs.Length);
+
+            LogIndented(3, "Getting a random message");
 
             return msgs[rand_idx];
         }
@@ -52,8 +66,11 @@ namespace ThreadFriendBot
             // MaxG: Edge case; starting message;
             if (PreviousMsg == null || PreviousMsg.Author.Id != Client.CurrentUser.Id)
             {
+                LogIndented(3, "First random message in the chain");
                 return $"{GetRandomMessage()} `[1]`";
             }
+
+            LogIndented(3, $"Previous message is by {PreviousMsg.Author.Username}");
 
             // MaxG: Parse using regex to extract the number of repeats.
             string pattern = @"\`\[(\d+)\]\`";
@@ -61,6 +78,8 @@ namespace ThreadFriendBot
 
             if (match.Success)
             {
+                LogIndented(4, "Extracted number of repeats");
+
                 // MaxG: Extract int.
                 int repeats = int.Parse(match.Groups[1].Value) + 1;
 
@@ -72,7 +91,7 @@ namespace ThreadFriendBot
                 //                                      Check if NOT null and not empty.
                 if ( repeats >= repeat_threshold && BotConfig.UserMentions?.Length > 0 )
                 {
-                    Console.WriteLine($"Number of repeats, {repeats}, is greater than {repeat_threshold}. Mentioning users.");
+                    LogIndented(4, $"Number of repeats, {repeats}, is greater than {repeat_threshold}. Mentioning users.");
                     ulong[] mentions = BotConfig.UserMentions;
 
                     StringBuilder sb = new StringBuilder(result);
@@ -81,23 +100,27 @@ namespace ThreadFriendBot
                     {
                         DiscordUser user = await Client.GetUserAsync(mentions[i]);
                         sb.Append($" {user.Mention} ");
-                        Console.WriteLine($"Mentioning {user.Username}");
+                        LogIndented(0, $"Mentioning {user.Username}");
                     }
 
                     result = sb.ToString();
+                }
+                else
+                {
+                    LogIndented(3, "Failed to extract number of repeats");
                 }
 
                 return result;
             }
 
             // MaxG: Fallback. This should not happen. If it does, a previous version may be conflicting.
-            Console.WriteLine($"GetRandThreadMsg({PreviousMsg}) ==> parsing failed.");
+            LogIndented(0, $"GetRandThreadMsg({PreviousMsg}) ==> parsing failed.");
             return $"{GetRandomMessage()} `[1]`";
         }
 
         private static void OnConfigChanged(object state)
         {
-            Console.WriteLine("config.json has been updated.");
+            LogIndented(0, "config.json has been updated.");
         }
 
         static async Task Main(string[] args)
@@ -132,7 +155,7 @@ namespace ThreadFriendBot
             Client.Resumed += ClientResumed;
 
             // MaxG: Join the thread and check to see if it is a ticket.
-            Client.ThreadCreated += JoinThread;
+            Client.ThreadCreated += JoinTicket;
 
             // MaxG: Register the slash commands.
             //var SlashCommandsConfig = Client.UseSlashCommands();
@@ -169,36 +192,42 @@ namespace ThreadFriendBot
             });
         }
 
-        private static async Task<Task> JoinThread(DiscordClient sender, ThreadCreateEventArgs args)
+        private static async Task<Task> JoinTicket(DiscordClient sender, ThreadCreateEventArgs args)
         {
             // MaxG: Wait just to ensure all users have joined.
             await Task.Delay(BotConfig.MessageDelay);
+            LogIndented(2, $"JoinTicket called, checking if {args.Thread.Name} is a ticket.");
 
             // MaxG: Loop all users.
             foreach (DiscordUser user in args.Thread.Users)
             {
+                // MaxG: This IS a thread, no worries.
+                LogIndented(2, $"Current user is {user.Username} // {user.Id}");
                 if (user.Id == BotConfig.TicketBotID)
                 {
-                    StringBuilder sb = new StringBuilder(BotConfig.NotAThreadMessage);
-
-                    // MaxG: Optionally mention users.
-                    if (BotConfig.UserMentions?.Length > 0)
-                    {
-                        ulong[] mentions = BotConfig.UserMentions;
-
-                        for (int i = 0; i < mentions.Length; i++)
-                        {
-                            DiscordUser u = await Client.GetUserAsync(mentions[i]);
-                            sb.Append($" {u.Mention} ");
-                        }
-                    }
-
-                    string result = sb.ToString();
-                    await args.Thread.SendMessageAsync(result);
-
+                    LogIndented(2, $"ID == BotID => {user.Id} == {BotConfig.TicketBotID}");
+                    LogIndented(2, "Joining ticket");
+                    await args.Thread.JoinThreadAsync();
                     return Task.CompletedTask;
                 }
             }
+
+            StringBuilder sb = new StringBuilder(BotConfig.NotAThreadMessage);
+
+            // MaxG: Optionally mention users.
+            if (BotConfig.UserMentions?.Length > 0)
+            {
+                ulong[] mentions = BotConfig.UserMentions;
+
+                for (int i = 0; i < mentions.Length; i++)
+                {
+                    DiscordUser u = await Client.GetUserAsync(mentions[i]);
+                    sb.Append($" {u.Mention} ");
+                }
+            }
+
+            string result = sb.ToString();
+            await args.Thread.SendMessageAsync(result);
 
             return Task.CompletedTask;
         }
@@ -211,19 +240,22 @@ namespace ThreadFriendBot
 
         private static async Task<Task> LoopAllThreads()
         {
-            Console.WriteLine("Looping all threads");
+            LogIndented(0, "Looping all threads");
             var AllThreads = Client.Guilds.SelectMany(guild => guild.Value.Threads);
 
-            Console.WriteLine("Beginning thread checks at " + DateTime.Now);
+            LogIndented(0, "Beginning thread checks at " + DateTime.Now);
             foreach (var Thread in AllThreads)
             {
-                Console.WriteLine("Checking Thread " + Thread.Value.Name);
-               
+                LogIndented(1, "........................................");
+                LogIndented(1, $"Checking thread \"{Thread.Value.Name}\"");
+                LogIndented(2, $"Channel is #{Thread.Value.Parent.Name}");
+
                 // MaxG: Skip the thread entirely if it's locked.
                 bool? IsLocked = Thread.Value.ThreadMetadata.IsLocked;
+                LogIndented(1, $"IsLocked = {IsLocked}");
                 if ( IsLocked.HasValue && IsLocked.Value )
                 {
-                    Console.WriteLine("Thread " + Thread.Value.Name + " is locked. Skipping.");
+                    LogIndented(2, $"Thread {Thread.Value.Name} is locked. Skipping.");
                     continue;
                 }
 
@@ -232,18 +264,21 @@ namespace ThreadFriendBot
                 // MaxG: Delay to reduce spam.
                 await Task.Delay(BotConfig.MessageDelay);
             }
-            Console.WriteLine("Ending thread checks at " + DateTime.Now);
+            LogIndented(0, $"Ending thread checks at {DateTime.Now}");
 
             return Task.CompletedTask;
         }
 
         private static async Task<Task> CheckLastThreadMessage(DiscordThreadChannel Thread)
         {
+            LogIndented(1, $"Checking the previous message in \"{Thread.Name}\"");
+
             // MaxG: Retrieve the most recent message.
             var messages = await Thread.GetMessagesAsync(1);
 
             if ( messages.Any() )
             {
+                LogIndented(2, "Thread contains messages");
                 var message = messages[0];
 
                 // MaxG: Get the timestamp.
@@ -254,19 +289,20 @@ namespace ThreadFriendBot
 
                 TimeSpan difference = DateTimeOffset.UtcNow - message_time;
 
-                Console.WriteLine($"The day difference is {difference.TotalDays}");
+                LogIndented(2, $"The day difference is {difference.TotalDays}");
 
                 // MaxG: Check if it has been too many days since the last message.
                 if (difference.TotalDays >= BotConfig.DayThreshold )
                 {
-                    Console.WriteLine("Sending a message!");
+                    LogIndented(2, "Sending a message!");
 
                     // MaxG: Send a message.
                     await Thread.SendMessageAsync( await GetRandThreadMsg(message) );
 
                     // MaxG: Reduce spam.
                     if (message.Author.Id == Client.CurrentUser.Id)
-                    { 
+                    {
+                        LogIndented(3, "Previous message being deleted");
                         await Thread.DeleteMessageAsync(message);
                     }
                 }
