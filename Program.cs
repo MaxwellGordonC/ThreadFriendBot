@@ -25,6 +25,12 @@ namespace ThreadFriendBot
         public int RepeatMentionThreshold { get; set; }
         public ulong? TicketBotID { get; set; }
         public string NotAThreadMessage { get; set; }
+        public string TicketBotClosedMessage { get; set; }
+        public string TicketBotCloseReqMessage { get; set; }
+        public string TicketBotCloseReqDenyMessage { get; set; }
+        public string[] CloseThisTicketMessages { get; set; }
+        public int NumPrevMessagesToCheck { get; set; }
+        public string ThankYouMessage { get; set; }
     }
 
     internal class Program
@@ -56,6 +62,16 @@ namespace ThreadFriendBot
             int rand_idx = Rand.Next(0, msgs.Length);
 
             LogIndented(3, "Getting a random message");
+
+            return msgs[rand_idx];
+        }
+
+        private static string GetRandomCloseReqMessage()
+        {
+            string[] msgs = BotConfig.CloseThisTicketMessages;
+            int rand_idx = Rand.Next(0, msgs.Length);
+
+            LogIndented(3, "Getting a random close req message");
 
             return msgs[rand_idx];
         }
@@ -157,6 +173,8 @@ namespace ThreadFriendBot
             // MaxG: Join the thread and check to see if it is a ticket.
             Client.ThreadCreated += JoinTicket;
 
+            Client.MessageCreated += OnMessageCreated;
+
             // MaxG: Register the slash commands.
             //var SlashCommandsConfig = Client.UseSlashCommands();
             //SlashCommandsConfig.RegisterCommands<DayThreshold>();
@@ -192,15 +210,43 @@ namespace ThreadFriendBot
             });
         }
 
+        private static async Task OnMessageCreated(DiscordClient sender, MessageCreateEventArgs e)
+        {
+            // MaxG: Ignore messages from the bots.
+            if (e.Author.IsBot)
+            {
+                return;
+            }
+
+            // MaxG: Check if the message starts with "<@id> say"
+            string bot_mention = $"<@{Client.CurrentUser.Id}>";
+
+            if (e.Message.Content.ToLower().StartsWith($"{bot_mention} say"))
+            {
+                int start_index = e.Message.Content.IndexOf("say", StringComparison.OrdinalIgnoreCase) + 3;
+
+                string message = e.Message.Content.Substring(start_index).Trim();
+
+                await e.Channel.SendMessageAsync(message);      
+            }
+        }
+
+
+        // TODO: Investigate why this gets called twice.
         private static async Task<Task> JoinTicket(DiscordClient sender, ThreadCreateEventArgs args)
         {
             // MaxG: Wait just to ensure all users have joined.
             await Task.Delay(BotConfig.MessageDelay);
+            LogIndented(2, $"---------------------------------------------------------------");
             LogIndented(2, $"JoinTicket called, checking if {args.Thread.Name} is a ticket.");
 
+            var thread_users = await args.Thread.ListJoinedMembersAsync();
+
             // MaxG: Loop all users.
-            foreach (DiscordUser user in args.Thread.Users)
+            foreach (DiscordThreadChannelMember member in thread_users)
             {
+                var user = await Client.GetUserAsync(member.Id);
+
                 // MaxG: This IS a thread, no worries.
                 LogIndented(2, $"Current user is {user.Username} // {user.Id}");
                 if (user.Id == BotConfig.TicketBotID)
@@ -226,9 +272,20 @@ namespace ThreadFriendBot
                 }
             }
 
+            // MaxG: Janky hack to avoid sending duplicate messages. Somehow this method gets called twice.
+            foreach (DiscordMessage message in await args.Thread.GetMessagesAsync(BotConfig.NumPrevMessagesToCheck))
+            {
+                if (message.Author.Id == Client.CurrentUser.Id)
+                {
+                    LogIndented(3, "Returning, already contains warning...");
+                    return Task.CompletedTask;
+                }
+            }
+
             string result = sb.ToString();
             await args.Thread.SendMessageAsync(result);
 
+            LogIndented(2, $"---------------------------------------------------------------");
             return Task.CompletedTask;
         }
 
@@ -250,9 +307,16 @@ namespace ThreadFriendBot
                 LogIndented(1, $"Checking thread \"{Thread.Value.Name}\"");
                 LogIndented(2, $"Channel is #{Thread.Value.Parent.Name}");
 
+                if (Thread.Value.ThreadMetadata is null)
+                {
+                    LogIndented(3, "Thread has no metadata; skipping...");
+                    continue;
+                }
+
                 // MaxG: Skip the thread entirely if it's locked.
                 bool? IsLocked = Thread.Value.ThreadMetadata.IsLocked;
                 LogIndented(1, $"IsLocked = {IsLocked}");
+                LogIndented(1, $"IsLocked.HasValue = {IsLocked.HasValue}");
                 if ( IsLocked.HasValue && IsLocked.Value )
                 {
                     LogIndented(2, $"Thread {Thread.Value.Name} is locked. Skipping.");
@@ -269,46 +333,83 @@ namespace ThreadFriendBot
             return Task.CompletedTask;
         }
 
-        private static async Task<Task> CheckLastThreadMessage(DiscordThreadChannel Thread)
+        private static async Task<Task> CheckLastThreadMessage(DiscordThreadChannel thread)
         {
-            LogIndented(1, $"Checking the previous message in \"{Thread.Name}\"");
+            LogIndented(1, $"Checking the previous message in \"{thread.Name}\"");
 
             // MaxG: Retrieve the most recent message.
-            var messages = await Thread.GetMessagesAsync(1);
+            var messages = await thread.GetMessagesAsync(BotConfig.NumPrevMessagesToCheck);
 
-            if ( messages.Any() )
+            if (messages.Any())
             {
                 LogIndented(2, "Thread contains messages");
-                var message = messages[0];
 
-                // MaxG: Get the timestamp.
-                DateTimeOffset message_time = message.Timestamp;
+                var latest_message = messages[0];
 
-                // MaxG: Standardize.
-                message_time = message_time.ToUniversalTime();
+                foreach (var message in messages)
+                {
+                    // MaxG: Check if the message is from the bot and contains embeds.
+                    if (message.Author.Id == BotConfig.TicketBotID && message.Embeds.Any())
+                    {
+                        var embed = message.Embeds[0];
 
+                        if (embed.Title is null)
+                        {
+                            continue;
+                        }
+
+                        if (string.Equals(embed.Title, BotConfig.TicketBotCloseReqMessage, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (embed.Description.ToLower().Contains(BotConfig.TicketBotCloseReqDenyMessage.ToLower()))
+                            {
+                                LogIndented(3, "Ticket close was denied, ignoring.");
+                                break;
+                            }
+                            else
+                            {
+                                LogIndented(3, "Politely asking the user to close the ticket.");
+                                // MaxG: Get the token for the user to mention.
+                                string mention_token = message.Content.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)[0];
+                                string string_id = new string(mention_token.Where(char.IsDigit).ToArray());
+                                ulong mention_id = ulong.Parse(string_id);
+
+                                DiscordUser user = await Client.GetUserAsync(mention_id);
+                                await thread.SendMessageAsync($"{user.Mention} {GetRandomCloseReqMessage()}");
+                            }
+                        }
+                        else if (string.Equals(embed.Title, BotConfig.TicketBotClosedMessage, StringComparison.OrdinalIgnoreCase))
+                        {
+                            LogIndented(4, "Ticket is actually closed. Skipping...");
+                            return Task.CompletedTask;
+                        }
+                    }
+                }
+
+                // MaxG: Get the timestamp of the latest message.
+                DateTimeOffset message_time = latest_message.Timestamp.ToUniversalTime();
                 TimeSpan difference = DateTimeOffset.UtcNow - message_time;
 
                 LogIndented(2, $"The day difference is {difference.TotalDays}");
 
                 // MaxG: Check if it has been too many days since the last message.
-                if (difference.TotalDays >= BotConfig.DayThreshold )
+                if (difference.TotalDays >= BotConfig.DayThreshold)
                 {
                     LogIndented(2, "Sending a message!");
 
                     // MaxG: Send a message.
-                    await Thread.SendMessageAsync( await GetRandThreadMsg(message) );
+                    await thread.SendMessageAsync(await GetRandThreadMsg(latest_message));
 
                     // MaxG: Reduce spam.
-                    if (message.Author.Id == Client.CurrentUser.Id)
+                    if (latest_message.Author.Id == Client.CurrentUser.Id)
                     {
                         LogIndented(3, "Previous message being deleted");
-                        await Thread.DeleteMessageAsync(message);
+                        await thread.DeleteMessageAsync(latest_message);
                     }
                 }
             }
 
             return Task.CompletedTask;
         }
+
     }
 }
